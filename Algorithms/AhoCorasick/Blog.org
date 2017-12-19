@@ -1,0 +1,535 @@
+#+TITLE: String Matching and AhoCorasick
+#+OPTIONS: author:t email:t creator:nil date:nil timestamp:nil toc:100
+#+EMAIL:deanzhu2@gmail.com
+#+AUTHOR:Dean Zhu
+
+Hello Everyone, this is my first Algorithms blog and hopefully not the last.
+Today I am going to explain the Aho-Corasick algorithm for multiple pattern matching, with my implementation and several possible modifications. \\
+The objective is that at the end of the blog you are able to understand fully the algorithm, and actually implemented yourself.
+
+Useful Previous Knowledge: *KMP, string matching*, *Automata*\\
+Must have Knowledge: *Trie*\\
+Notation:
+- *S*[i..j] is the substring of S from position *i* to *j*, indexed at 0, inclusive on *i* and exclusive *j*
+- *|S|* is the size of *S*
+
+In the first section I am going to explain the *KMP Algorithm* (Knuth-Morris-Pratt), if you understand how the SuffixLinks work you can skip to the next section
+
+* *String Matching and KMP*
+Let's consider the following problem: We are given 2 strings *S* and *T* and we are asked to check if S is a substring of *T*.
+
+
+
+** *Naive Solution*
+We can naively compute the solution by checking if *S* matches
+*T[i..i+|S|]* for some *i*, this takes *O(n)* for each substring by
+checking each letter one by one, this runs in a total complexity of
+*O(n^{2})*.  There is a constant time solution to compare them using
+hashing, but I won't cover it right now.
+
+** *KMP O(n) Solution*
+Let's forget the original problem for a second and think about this
+one instead: Given the strings *S* we want to compute for each
+*S[0..i]* what is the largest *x_{i}* different to *i* such that
+*S[i-x_{i}..i] = S[0..x_{i}]*. (if x_{i} = i, we have that it always
+matches as it is the same Substring) \\
+If we can solve this problem then it's clear that if we use the string
+*R = S+$+T* (*R[0..|S|]* is exactly *S*, *R[|S|+1..|S|+|T|+1]* is
+exactly *T* and *$* is some character which is not in our alphabet)
+and find an *i \geq |S| + 1* such that *x_{i} = |S|* we have actually
+found a place where *S* is a substring of *T*, so we have also found
+solution to our original problem. Let's try to solve it in O(n).
+
+*** *Prefix function*
+It might be beneficial to know that *x_{i}* is also known as the Prefix
+Function.
+
+*Prefix*: is any string of the form S[0..i]. \\
+*Proper prefix*: is any prefix different to the original string. \\
+*Suffix*: is any string of the form S[i..|S|]. \\
+*Proper Suffix*: is any suffix different to the original string. \\
+
+With the given definitions we can see that *x_{i}* corresponds to the
+largest proper prefix which is also a proper suffix of our string
+*S[0..i]*. Indeed as we have that *S[i-x_{i}..i] = S[0..x_{i}]*, we
+know that *S[0..x_{i}]* is a prefix of *S* and *S[i-x_{i}..i]* is a
+suffix of *S*. From now one any prefix that is also a suffix will be
+called *Border*.\\
+Returning to our second problem, we are actually looking for the
+longest Border in string *S*.
+
+**** *The Border of a Border is still a Border.*
+That title sounded a little complicated, lets go by parts.\\
+Lets consider *S* and its border *S[0..i]*, and now lets consider a
+border of *S[0..i]* and lets note it by *S[0..j], j \lt i*.  It's
+obvious that *S[0..j]* is a proper prefix of *S*. \\
+Let's see that it is also a suffix. We know that *S[i-j..i] = S[0..j]*
+because it is a border. Then it is clear that *S[0..j]* is actually
+the same as *S[0..i]* after taking away some letters at the beggining
+of *S[0..i]*. And we know that *S[0..i]* is a suffix of *S*. That
+means *S[0..j]* is also Suffix of *S*. You might need to read it a few
+times or writing an example down. The following might also help you
+think. Lets say we have *T* and *T[i..|T|]* which is a suffix of T, if
+we take away a few letters from the beggining of *T[i..|T|]* will it
+still a suffix of *T*? The answer is clearly yes.
+
+**** *x_{i} + 1 \geq x{i+1}*
+Let's see how the length of the border behaves. \\
+Lets consider *S[0..j]* a border of *S[0..i]*, if we consider
+*S[0..j+1]* and *S[0..i+1]*, it is quite obvious that if *S[j]* =
+*S[i]* then the *S[0..j+1]* is a border of *S[0..i+1]*. (Note that it
+is *j* and *i* because we are right-exclusive). What would happen if
+we find a *k* such that *j + 1 < k < i + 1* and *S[0..k]* is a border
+of *S[0..i+1]* ? That would mean that *S[0..k-1]* is a border of
+*S[0..i]* which would mean that *S[0..j]* was not the longest border
+of *S[0..i]* which is a contradiction.
+
+*** *KMP*
+  Knowing the above facts we can start building our Prefix function
+  *x_{i}* in linear time. We are going to build this from the shortest
+  prefix to the whole String *S*. \\
+  Imagine we are at an intermediate step and we want to know the
+  longest border of *S[0..i+1]*. We have seen above that if *S[i] =
+  S[x_{i}]* then x_{i+1} = x_{i} + 1.(Note that *x_{i}* is *j* in the
+  example given above) so this case is solved. Lets suppose that *S[i]
+  \neq S[x_{i}]*, how can we find the longest border for *i+1* now? We
+  know that *S[0..x_{i}]* is a border of *S[0..i]*, and as we know
+  /"The Border of a Border is still a Border."/, so actually
+  *S[0..x_{x_{i}}]* is also a border of *S[0..i]*. And we know that it
+  is the longest border of *S[0..x_{i}]* which means that it is the
+  second longest border of *S[0..i]* so we can now check if *S[i] =
+  S[x_{x_{i}}]* until we find a match.
+
+#+BEGIN_SRC cpp
+  string S;
+  vector<int> x(S.size() + 1, -1);
+  int k = -1;
+  for (int i = 0; i < S.size(); ++i) {
+      k = x[i];
+      while (k > -1 and S[i] != S[k]) k = x[k];
+      //While S[i] != S[x_{i}] we check for the longest border of the longest border.
+      //If we never find a match that means that the longest border is empty
+      x[i+1] = k+1; // We know that x_{i+1} is the length of the last border + 1
+  }
+#+END_SRC
+*** *Complexity Analysis*
+So after checking on this code you might wonder the complexity of KMP
+and doubt my claim that it is linear, lets prove it.\\
+In our code we have 2 loops, the outer loop and the inner loop. Let's
+calculate maximum number of iterations by checking how many possible
+modifications we can make to *k*, notice when we change go to the next
+iteration k increases by one. Check that this code is equivalent to
+the last one.
+
+#+BEGIN_SRC cpp
+  for (int i = 0; i < S.size(); ++i, ++k) {
+      while (k > -1 and S[i] != S[k]) k = x[k];
+      x[i+1] = k+1;
+  }
+#+END_SRC
+
+In the inner loop we decrease *k* by a non zero value at each iteration,
+but never to a value below 0. \\
+What does it mean? We know that we increase *k |S|* times, and we can
+decrease it to 0 as many times as we want, but as we have only
+increase it *|S|* times it is impossible to decrease it more times as
+then *k* would forcefully be negative. Hence we at most do *2|S|*
+iterations.
+
+If you understood the above correctly remember that what we did by
+going to *x_{x_{i}}* (k = x[k]) is akin navigating through the
+*suffix links*, where a suffix link points to the longest border.  Now
+you should be able to see if S is a substring of T in linear time, you
+can try it out in this link [[https://jutge.org/problems/P33597_en][Online Jutge]] (You might need an account
+first).
+
+
+
+* *String Matching and AhoCorasick*
+Now let's consider a new problem, we are given *M* patterns *P_{i}* and are asked to see if they appear in a string *S*.
+
+** *Naive Solution*
+   Now the naive solution can be comparing each of the *M* strings to
+   match against *S*, which gives us a
+   $O(\sum\limits_i^M |P_{i}| * |S|)$, if we decide to use the KMP
+   method here it would still give us a $O(M*|S|) which seems good
+   enough, can we do better though?
+
+** *Generalizaing the KMP algorithm*
+   We have seen that the KMP algorithm is every fast when matching a
+   single string, how can we generalize it to multiple patterns? \\
+   Let's create an *Automata* to represent the data, an *Automata* is
+   simply a graph where the *Nodes are states* and *Edges are
+   transitions*, there is also an *Initial state* and some *End
+   states* that indicate that a pattern ends at that *state*. \\
+
+*** *Building the skeleton*
+   How would we want the automata so we can solve our problem easily?
+   First of all we would need it to lead us to an *End state* if we
+   feed a pattern to it at the *Initial State*. The way to build this
+   is simply using a *Trie*, this will be the skeleton of our Automata. \\
+   I won't go into too much detail, as it is a very elementary data-structure.
+   This should be your standard Trie Building function:
+#+BEGIN_SRC cpp
+  struct node{
+      int nxt[Alpha] = {}; //Alpha is the number of transitions.
+      char c;
+  };
+  vector<node> V(1000000);
+  //0 will be our initial state
+
+  int getval(char c); //we map each transition to an integer.
+  int lst = 1;
+  void BuildTrie(vector<string> &v) {
+      for(auto &s : v) {
+          int pos = 0;
+          for(char &c : s) {
+              int val = getval(c);
+              if(!V[pos].nxt[val]) {
+                  V[lst].c = c; V[pos].nxt[val] = lst++;
+                  SaveSomeData();
+                  //suppose we save some needed information here
+              }
+              pos = V[pos].nxt[val];
+          }
+          SaveSomeEndStateData();
+          //suppose we save some data at the End State
+      }
+  }
+#+END_SRC
+
+*** *Building the rest*
+Now we ask ourselves a question, what if in the middle of the pattern
+we encounter a character which has no corresponding transition? \\
+Let's think what we did in the KMP, whenever we found a matching
+character we simply increased the border by one, the equivalent would be going to the next state. Whenever we found a not matching character we
+would compare it to *x_{x_{i}}*. We are going to do the same here, we
+are going to find the "Prefix Function" in our Automata.
+
+**** *"Prefix Funtion"* in the Trie
+Let's think about the *Prefix funtion* again, it said that
+*S[0..x_{i}]* was a longest prefix of *S* that was also a suffix of
+*S[0..i]*. Now there are multiple strings, how do we generalize this?
+Imagine we are looking for the prefix funtion of *S[0..i]*, we would
+want to look for the longest Prefix *P* that was also a Suffix of
+*S[0..i]*. *P* here must be the pattern needed to go to another state
+of the Trie.  It's easy to see that this behaves the same way as the
+*prefix function*. So we can write this code:
+#+BEGIN_SRC cpp
+  int val = getval(V[pos].c);
+
+  int k = V[V[pos].p].SuffixLink;
+  while(k > -1 && !V[k].nxt[val]) k = V[k].SuffixLink;
+  if(k == -1) V[pos].SuffixLink = 0;
+  else {
+       V[pos].SuffixLink = V[k].nxt[val];
+  }
+#+END_SRC
+
+Notice that we now call *x_{i}* the *SuffixLink*, when k = -1, we would
+assign 0 but now in a general case we assign *V[k].nxt[val]*; This is
+the same as we did before, when we go out of the inner loop we know
+that we can increase the border by one, but now we can increase it
+with a few different chars, so we simply tell it to point to the one
+corresponding to our char.
+
+Something you might have noticed is that we assume that
+V[k].SuffixLink has been computed for all the values of V[k]. How can
+we assure that? One key idea is that the Prefix pointed by SuffixLink
+must be shorter than our current state, as if not it would not be a
+proper suffix of the current state, that means that if we build the
+Suffix Links by increasing length we would have no problem. Let's do
+this by using a bfs.
+
+#+BEGIN_SRC cpp
+  void CreateSuffixLink() {
+      queue<int> q;
+      for(q.push(0); q.size(); q.pop()) {
+          int pos = q.front();
+          if(!pos) V[pos].SuffixLink = -1;
+          else {
+              int val = getval(V[pos].c);
+              int j = V[V[pos].p].SuffixLink;
+              while(j > -1 && !V[j].nxt[val]) j = V[j].SuffixLink;
+              if(j == -1) V[pos].SuffixLink = 0;
+              else {
+                  V[pos].SuffixLink = V[j].nxt[val];
+                  SaveSomeSUffixLinkData();
+                  //Suppose we want to know some info about out SuffixLink
+              }
+
+          }
+          for(int i = 0; i < Alpha; ++i) if(V[pos].nxt[i]) q.push(V[pos].nxt[i]);
+      }
+  }
+#+END_SRC
+
+So now we can do the same as the KMP Matching, whenever we fail a
+match we can go to its *Prefix function/SuffixLink* and check if we
+can increase the border at that point. So our navigating funcion will be:
+
+#+BEGIN_SRC cpp
+    void find(string& word) {
+        int pos = 0;
+        for(auto &c : word) {
+            int val = getval(c);
+            while(pos > -1 && !V[pos].nxt[val]) pos = V[pos].SuffixLink;
+            if(pos == -1) pos = 0;
+            else pos = V[pos].nxt[val];
+        }
+    }
+#+END_SRC
+
+Now you might ask what happens if my Suffixlink is a *End state*, how
+do I know I have visited it? The answer is easy: in
+/SaveSomeSuffixLinkData()/ we save to our state if our suffix link was
+an *Ending state*. \\
+What if the SuffixLink of the SuffixLink is an
+*Ending State*? We have to notice one more property of our
+SuffixLinks: If we only follow the SuffixLinks we create a DAG (it's
+impossible to have a cycle as SuffixLink only go to shorter strings)
+And as the SuffixLink of a SuffixLink is still our Border we will
+visit *ALL* borders of our state, hence it is enough if we push up the
+Trie if any SuffixLink was an *Ending state*.
+
+Now we have enough Knowledge to implement our first Aho-Corasick Trie:
+
+#+BEGIN_SRC cpp
+  struct Trie{
+      int lst = 1;
+      struct node{
+          int nxt[Alpha] = {}, p = -1;
+          char c;
+          int end = 0;
+          //bitset<MaxN> bitmask;
+          int SuffixLink;
+      };
+      vector<node> V;
+
+      inline int getval(char c);
+
+      void CreateSuffixLink() {
+          queue<int> q;
+          for(q.push(0); q.size(); q.pop()) {
+              int pos = q.front();
+              if(!pos) V[pos].SuffixLink = -1;
+              else {
+                  int val = getval(V[pos].c);
+                  int j = V[V[pos].p].SuffixLink;
+                  while(j > -1 && !V[j].nxt[val]) j = V[j].SuffixLink;
+                  if(j == -1) V[pos].SuffixLink = 0;
+                  else {
+                      V[pos].SuffixLink = V[j].nxt[val];
+                      V[pos].end |= V[V[pos].SuffixLink].end;
+                  }
+
+              }
+              for(int i = 0; i < Alpha; ++i) if(V[pos].nxt[i]) q.push(V[pos].nxt[i]);
+          }
+      }
+
+      void init(vector<string> &v) {
+          V.resize(MaxM);
+          int id = 0;
+          for(auto &s : v) {
+              int pos = 0;
+              for(char &c : s) {
+                  int val = getval(c);
+                  if(!V[pos].nxt[val]) {
+                      V[lst].p = pos;
+                      V[lst].c = c;
+                      V[pos].nxt[val] = lst++;
+                  }
+                  pos = V[pos].nxt[val];
+              }
+              V[pos].end = 1;
+          }
+          CreateSuffixLink();
+      }
+  };
+#+END_SRC
+
+*** *Trimming the Code*
+Now we have to modify this Trie according to the problem, what if we
+dont want to know if some pattern appears but also *How many times
+each pattern appears*? The naive idea would be simply going down the
+path created by Suffixlinks and add in some vector whenever we go
+through some *End State* but that would be too slow. \\
+*Remember this property*: If we only follow the SuffixLinks we create a DAG. That
+means that we can simply compute the answer lazily, we go through all
+the states and store for each state how many times we have been there,
+then we can easily calculate how many times we have been in each
+state + how many times we would be there using Suffixlinks by
+processing in ReverseBfs order.
+
+#+BEGIN_SRC cpp
+  struct Trie{
+      static const int Alpha = 26;
+      int lst = 1;
+      struct node{
+          int nxt[Alpha] = {}, p = -1;
+          char c;
+          vector<int> end;
+          //bitset<MaxN> bitmask;
+          int SuffixLink;
+          int cnt = 0;
+      };
+      vector<node> V;
+      int num;
+      stack<int> reversebfs;
+
+      inline int getval(char c);
+
+      void CreateSuffixLink() {
+          queue<int> q;
+          for(q.push(0); q.size(); q.pop()) {
+              int pos = q.front();
+              reversebfs.push(pos);
+              if(!pos) V[pos].SuffixLink = -1;
+              else {
+                  int val = getval(V[pos].c);
+                  int j = V[V[pos].p].SuffixLink;
+                  while(j > -1 && !V[j].nxt[val]) j = V[j].SuffixLink;
+                  if(j == -1) V[pos].SuffixLink = 0;
+                  else {
+                      V[pos].SuffixLink = V[j].nxt[val];
+                      //V[pos].bitmask |= V[V[pos].SuffixLink].bitmask;
+                  }
+
+              }
+              for(int i = 0; i < Alpha; ++i) if(V[pos].nxt[i]) q.push(V[pos].nxt[i]);
+          }
+      }
+
+      void init(vector<string> &v) {
+          V.resize(MaxM);
+          num = v.size();
+          int id = 0;
+          for(auto &s : v) {
+              int pos = 0;
+              for(char &c : s) {
+                  int val = getval(c);
+                  if(!V[pos].nxt[val]) {
+                      V[lst].p = pos; V[lst].c = c; V[pos].nxt[val] = lst++;
+                  }
+                  pos = V[pos].nxt[val];
+              }
+              V[pos].end.emplace_back(id++);
+          }
+          CreateSuffixLink();
+      }
+
+      vector<int> find(string& word) {
+          int pos = 0;
+          vector<int> ans(num, 0);
+          for(auto &c : word) {
+              int val = getval(c);
+              while(pos > -1 && !V[pos].nxt[val]) pos = V[pos].SuffixLink;
+              if(pos == -1) pos = 0;
+              else pos = V[pos].nxt[val];
+              V[pos].cnt++; //We count the times we reach each node, and then do a reverse propagation
+          }
+          for(;reversebfs.size();reversebfs.pop()) {
+              int	x = reversebfs.top(); //When we process x, we know we have been there V[x].cnt times;
+              for(int i : V[x].end) ans[i] += V[x].cnt;
+              if(V[x].SuffixLink != -1) V[V[x].SuffixLink].cnt += V[x].cnt;
+          }
+          return ans;
+      }
+  };
+#+END_SRC
+
+And last straight forward optimization we can add is the following: we see that this failure block appears many times:
+#+BEGIN_SRC cpp
+ while(pos > -1 && !V[pos].nxt[val]) pos = V[pos].SuffixLink;
+ if(pos == -1) pos = 0;
+ else pos = V[pos].nxt[val];
+#+END_SRC
+
+Why don't we simply save this as a transition?
+
+Finally our Aho-Corasick Trie becomes this:
+
+#+BEGIN_SRC cpp
+  const int MaxM = 200005;
+
+  struct Trie{
+      static const int Alpha = 26;
+      static const int first = 'a';
+      int lst = 1;
+      struct node{
+          int nxt[Alpha] = {}, p = -1;
+          char c;
+          vector<int> end; //if 2 patterns must be different, change to int end = -1;
+          int SuffixLink;
+          int cnt = 0;
+      };
+      vector<node> V(MaxM);
+      int num;
+      stack<int> reversebfs;
+      inline int getval(char c) {
+          return c - first;
+      }
+
+      void CreateSuffixLink() {
+          queue<int> q;
+          for(q.push(0); q.size(); q.pop()) {
+              int pos = q.front();
+              reversebfs.push(pos);
+              for(int i = 0; i < Alpha; ++i) {
+                  if(V[pos].nxt[i]) q.push(V[pos].nxt[i]);
+                  else if(!pos || !V[pos].p) {
+                      V[pos].SuffixLink = 0;
+                      V[pos].nxt[i] = V[0].nxt[i];
+                  }
+                  else {
+                      int val = getval(V[pos].c);
+                      int j = V[V[pos].p].SuffixLink;
+                      V[pos].SuffixLink = V[j].nxt[val];
+                      //We guarantee that V[j].nxt saves all the possible transitions using SuffixLinks
+                      V[pos].nxt[i] = V[V[pos].SuffixLink].nxt[i];
+                  }
+              }
+          }
+      }
+
+      void init(vector<string> &v) {
+          num = v.size();
+          int id = 0;
+          for(auto &s : v) {
+              int pos = 0;
+              for(char &c : s) {
+                  int val = getval(c);
+                  if(!V[pos].nxt[val]) {
+                      V[lst].p = pos; V[lst].c = c; V[pos].nxt[val] = lst++;
+                  }
+                  pos = V[pos].nxt[val];
+              }
+              V[pos].end.emplace_back(id++);
+          }
+          CreateSuffixLink();
+      }
+
+      vector<int> find(string& word) {
+          int pos = 0;
+          vector<int> ans(num, 0);
+          for(auto &c : word) {
+              int val = getval(c);
+              pos = V[pos].nxt[val];
+              V[pos].cnt++;
+              //We count the times we reach each node, and then do a reverse propagation
+          }
+          for(;reversebfs.size();reversebfs.pop()) {
+              int x = reversebfs.top();
+              //When we process x, we know we have been there V[x].cnt times;
+              for(int i : V[x].end) ans[i] += V[x].cnt;
+              if(V[x].SuffixLink != -1) V[V[x].SuffixLink].cnt += V[x].cnt;
+          }
+          return ans;
+      }
+  };
+
+#+END_SRC
+And the Complexity is O(n+m) \\
+Thank you for reading the blog, if anything isn't clear feel free to mail me (At least until I can add some comments to the blog)
+Testing Problems: [[http://www.spoj.com/problems/STRMATCH/][SPOJ STRMATCH]], [[http://codeforces.com/gym/101174][SWERC16 Problem E]]

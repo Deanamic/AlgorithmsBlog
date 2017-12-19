@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>String Matching and AhoCorasick</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Org-mode">
+<meta name="author" content="Dean Zhu">
+
+<link  href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
+<style type="text/css">
+/* org mode styles on top of twbs */
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    font-size: 18px;
+    margin-bottom: 105px;
+}
+
+footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 101px;
+    background-color: #f5f5f5;
+}
+
+footer > div {
+    padding: 10px;
+}
+
+footer p {
+    margin: 0 0 5px;
+    text-align: center;
+    font-size: 16px;
+}
+
+#table-of-contents {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+blockquote p {
+    font-size: 18px;
+}
+
+pre {
+    font-size: 16px;
+}
+
+.footpara {
+    display: inline-block;
+}
+
+figcaption {
+  font-size: 16px;
+  color: #666;
+  font-style: italic;
+  padding-bottom: 15px;
+}
+
+/* from twbs docs */
+
+.bs-docs-sidebar.affix {
+    position: static;
+}
+@media (min-width: 768px) {
+    .bs-docs-sidebar {
+        padding-left: 20px;
+    }
+}
+
+/* All levels of nav */
+.bs-docs-sidebar .nav > li > a {
+    display: block;
+    padding: 4px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #999;
+}
+.bs-docs-sidebar .nav > li > a:hover,
+.bs-docs-sidebar .nav > li > a:focus {
+    padding-left: 19px;
+    color: #A1283B;
+    text-decoration: none;
+    background-color: transparent;
+    border-left: 1px solid #A1283B;
+}
+.bs-docs-sidebar .nav > .active > a,
+.bs-docs-sidebar .nav > .active:hover > a,
+.bs-docs-sidebar .nav > .active:focus > a {
+    padding-left: 18px;
+    font-weight: bold;
+    color: #A1283B;
+    background-color: transparent;
+    border-left: 2px solid #A1283B;
+}
+
+/* Nav: second level (shown on .active) */
+.bs-docs-sidebar .nav .nav {
+    display: none; /* Hide by default, but at >768px, show it */
+    padding-bottom: 10px;
+}
+.bs-docs-sidebar .nav .nav > li > a {
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 30px;
+    font-size: 12px;
+    font-weight: normal;
+}
+.bs-docs-sidebar .nav .nav > li > a:hover,
+.bs-docs-sidebar .nav .nav > li > a:focus {
+    padding-left: 29px;
+}
+.bs-docs-sidebar .nav .nav > .active > a,
+.bs-docs-sidebar .nav .nav > .active:hover > a,
+.bs-docs-sidebar .nav .nav > .active:focus > a {
+    padding-left: 28px;
+    font-weight: 500;
+}
+
+/* Nav: third level (shown on .active) */
+.bs-docs-sidebar .nav .nav .nav {
+    padding-bottom: 10px;
+}
+.bs-docs-sidebar .nav .nav .nav > li > a {
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 40px;
+    font-size: 12px;
+    font-weight: normal;
+}
+.bs-docs-sidebar .nav .nav .nav > li > a:hover,
+.bs-docs-sidebar .nav .nav .nav > li > a:focus {
+    padding-left: 39px;
+}
+.bs-docs-sidebar .nav .nav .nav > .active > a,
+.bs-docs-sidebar .nav .nav .nav > .active:hover > a,
+.bs-docs-sidebar .nav .nav .nav > .active:focus > a {
+    padding-left: 38px;
+    font-weight: 500;
+}
+
+/* Show and affix the side nav when space allows it */
+@media (min-width: 992px) {
+    .bs-docs-sidebar .nav > .active > ul {
+        display: block;
+    }
+    /* Widen the fixed sidebar */
+    .bs-docs-sidebar.affix,
+    .bs-docs-sidebar.affix-bottom {
+        width: 213px;
+    }
+    .bs-docs-sidebar.affix {
+        position: fixed; /* Undo the static from mobile first approach */
+        top: 20px;
+    }
+    .bs-docs-sidebar.affix-bottom {
+        position: absolute; /* Undo the static from mobile first approach */
+    }
+    .bs-docs-sidebar.affix .bs-docs-sidenav,.bs-docs-sidebar.affix-bottom .bs-docs-sidenav {
+        margin-top: 0;
+        margin-bottom: 0
+    }
+}
+@media (min-width: 1200px) {
+    /* Widen the fixed sidebar again */
+    .bs-docs-sidebar.affix-bottom,
+    .bs-docs-sidebar.affix {
+        width: 263px;
+    }
+}
+</style>
+<script type="text/javascript">
+$(function() {
+    'use strict';
+
+    $('.bs-docs-sidebar li').first().addClass('active');
+
+    $(document.body).scrollspy({target: '.bs-docs-sidebar'});
+
+    $('.bs-docs-sidebar').affix();
+});
+</script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  displayAlign: "center",
+  displayIndent: "2em",
+  messageStyle: "none",
+  "HTML-CSS": {
+    scale: 100,
+    styles: {
+      ".MathJax_Display": {
+        "font-size": "100%"
+      }
+    }
+  },
+  "SVG": {
+    scale: 100,
+    styles: {
+      ".MathJax_SVG_Display": {
+        "font-size": "100%",
+        "margin-left": "-2.281em"
+      }
+    }
+  }
+});
+</script>
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_SVG"></script>
+</head>
+<body>
+<div id="content" class="container">
+<div class="row"><div class="col-md-9"><h1 class="title">String Matching and AhoCorasick</h1>
+<p>
+Hello Everyone, this is my first Algorithms blog and hopefully not the last.
+Today I am going to explain the Aho-Corasick Algorithm for multiple pattern matching, with my implementation and several possible modifications. <br >
+The objective is that at the end of the blog you are able to understand fully the algorithm, and actually implemented yourself.
+</p>
+
+<p>
+Useful Previous Knowledge: <b>KMP, string matching</b>, <b>Automata</b><br >
+Must have Knowledge: <b>Trie</b><br >
+Notation:
+</p>
+<ul class="org-ul">
+<li><b>S</b>[i..j] is the substring of S from position <b>i</b> to <b>j</b>, indexed at 0, inclusive on <b>i</b> and exclusive <b>j</b>
+</li>
+<li><b>|S|</b> is the size of <b>S</b>
+</li>
+</ul>
+
+<p>
+In the first section I am going to explain the KMP Algorithm (Knuth-Morris-Pratt), if you understand how the SuffixLinks work you can skip to the next section
+</p>
+
+<div id="outline-container-sec-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> <b>String Matching and KMP</b></h2>
+<div class="outline-text-2" id="text-1">
+<p>
+Let's consider the following problem: We are given 2 strings <b>S</b> and <b>T</b> and we are asked to check if S is a substring of <b>T</b>.
+</p>
+</div>
+
+
+
+<div id="outline-container-sec-1-1" class="outline-3">
+<h3 id="sec-1-1"><span class="section-number-3">1.1</span> <b>Naive Solution</b></h3>
+<div class="outline-text-3" id="text-1-1">
+<p>
+We can naively compute the solution by checking if <b>S</b> matches
+<b>T[i..i+|S|]</b> for some <b>i</b>, this takes <b>O(n)</b> for each substring by
+checking each letter one by one, this runs in a total complexity of
+<b>O(n<sup>2</sup>)</b>.  There is a constant time solution to compare them using
+hashing, but I won't cover it right now.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-1-2" class="outline-3">
+<h3 id="sec-1-2"><span class="section-number-3">1.2</span> <b>KMP O(n) Solution</b></h3>
+<div class="outline-text-3" id="text-1-2">
+<p>
+Let's forget the original problem for a second and think about this
+one instead: Given the strings <b>S</b> we want to compute for each
+<b>S[0..i]</b> what is the largest <b>x<sub>i</sub></b> different to <b>i</b> such that
+<b>S[i-x<sub>i</sub>..i] = S[0..x<sub>i</sub>]</b>. (if x<sub>i</sub> = i, we have that it always
+matches as it is the same Substring) <br >
+If we can solve this problem then it's clear that if we use the string
+<b>R = S+$+T</b> (<b>R[0..|S|]</b> is exactly <b>S</b>, <b>R[|S|+1..|S|+|T|+1]</b> is
+exactly <b>T</b> and <b>$</b> is some character which is not in our alphabet)
+and find an <b>i &ge; |S| + 1</b> such that <b>x<sub>i</sub> = |S|</b> we have actually
+found a place where <b>S</b> is a substring of <b>T</b>, so we have also found
+solution to our original problem. Let's try to solve it in O(n).
+</p>
+</div>
+
+<div id="outline-container-sec-1-2-1" class="outline-4">
+<h4 id="sec-1-2-1"><span class="section-number-4">1.2.1</span> <b>Prefix function</b></h4>
+<div class="outline-text-4" id="text-1-2-1">
+<p>
+It might be beneficial to know that <b>x<sub>i</sub></b> is also known as the Prefix
+Function.
+</p>
+
+<p>
+<b>Prefix</b>: is any string of the form S[0..i]. <br >
+<b>Proper prefix</b>: is any prefix different to the original string. <br >
+<b>Suffix</b>: is any string of the form S[i..|S|]. <br >
+<b>Proper Suffix</b>: is any suffix different to the original string. <br >
+</p>
+
+<p>
+With the given definitions we can see that <b>x<sub>i</sub></b> corresponds to the
+largest proper prefix which is also a proper suffix of our string
+<b>S[0..i]</b>. Indeed as we have that <b>S[i-x<sub>i</sub>..i] = S[0..x<sub>i</sub>]</b>, we
+know that <b>S[0..x<sub>i</sub>]</b> is a prefix of <b>S</b> and <b>S[i-x<sub>i</sub>..i]</b> is a
+suffix of <b>S</b>. From now one any prefix that is also a suffix will be
+called <b>Border</b>.<br >
+Returning to our second problem, we are actually looking for the
+longest Border in string <b>S</b>.
+</p>
+</div>
+
+<ol class="org-ol"><li><a id="sec-1-2-1-1" name="sec-1-2-1-1"></a><b>The Border of a Border is still a Border.</b><br ><div class="outline-text-5" id="text-1-2-1-1">
+<p>
+That title sounded a little complicated, lets go by parts.<br >
+Lets consider <b>S</b> and its border <b>S[0..i]</b>, and now lets consider a
+border of <b>S[0..i]</b> and lets note it by <b>S[0..j], j &lt; i</b>.  It's
+obvious that <b>S[0..j]</b> is a proper prefix of <b>S</b>. <br >
+Let's see that it is also a suffix. We know that <b>S[i-j..i] = S[0..j]</b>
+because it is a border. Then it is clear that <b>S[0..j]</b> is actually
+the same as <b>S[0..i]</b> after taking away some letters at the beggining
+of <b>S[0..i]</b>. And we know that <b>S[0..i]</b> is a suffix of <b>S</b>. That
+means <b>S[0..j]</b> is also Suffix of <b>S</b>. You might need to read it a few
+times or writing an example down. The following might also help you
+think. Lets say we have <b>T</b> and <b>T[i..|T|]</b> which is a suffix of T, if
+we take away a few letters from the beggining of <b>T[i..|T|]</b> will it
+still a suffix of <b>T</b>? The answer is clearly yes.
+</p>
+</div>
+</li>
+
+<li><a id="sec-1-2-1-2" name="sec-1-2-1-2"></a><b>x<sub>i</sub> + 1 &ge; x{i+1}</b><br ><div class="outline-text-5" id="text-1-2-1-2">
+<p>
+Let's see how the length of the border behaves. <br >
+Lets consider <b>S[0..j]</b> a border of <b>S[0..i]</b>, if we consider
+<b>S[0..j+1]</b> and <b>S[0..i+1]</b>, it is quite obvious that if <b>S[j]</b> =
+<b>S[i]</b> then the <b>S[0..j+1]</b> is a border of <b>S[0..i+1]</b>. (Note that it
+is <b>j</b> and <b>i</b> because we are right-exclusive). What would happen if
+we find a <b>k</b> such that <b>j + 1 &lt; k &lt; i + 1</b> and <b>S[0..k]</b> is a border
+of <b>S[0..i+1]</b> ? That would mean that <b>S[0..k-1]</b> is a border of
+<b>S[0..i]</b> which would mean that <b>S[0..j]</b> was not the longest border
+of <b>S[0..i]</b> which is a contradiction.
+</p>
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-1-2-2" class="outline-4">
+<h4 id="sec-1-2-2"><span class="section-number-4">1.2.2</span> <b>KMP</b></h4>
+<div class="outline-text-4" id="text-1-2-2">
+<p>
+Knowing the above facts we can start building our Prefix function
+<b>x<sub>i</sub></b> in linear time. We are going to build this from the shortest
+prefix to the whole String <b>S</b>. <br >
+Imagine we are at an intermediate step and we want to know the
+longest border of <b>S[0..i+1]</b>. We have seen above that if <b>S[i] =
+S[x<sub>i</sub>]</b> then x<sub>i+1</sub> = x<sub>i</sub> + 1.(Note that <b>x<sub>i</sub></b> is <b>j</b> in the
+example given above) so this case is solved. Lets suppose that <b>S[i]
+&ne; S[x<sub>i</sub>]</b>, how can we find the longest border for <b>i+1</b> now? We
+know that <b>S[0..x<sub>i</sub>]</b> is a border of <b>S[0..i]</b>, and as we know
+<i>"The Border of a Border is still a Border."</i>, so actually
+<b>S[0..x<sub>x<sub>i</sub></sub>]</b> is also a border of <b>S[0..i]</b>. And we know that it
+is the longest border of <b>S[0..x<sub>i</sub>]</b> which means that it is the
+second longest border of <b>S[0..i]</b> so we can now check if <b>S[i] =
+S[x<sub>x<sub>i</sub></sub>]</b> until we find a match.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-cpp"><span style="color: #ECBE7B;">string</span> <span style="color: #dcaeea;">S</span>;
+<span style="color: #ECBE7B;">vector</span><span style="color: #51afef;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #51afef;">&gt;</span> <span style="color: #c678dd;">x</span><span style="color: #51afef;">(</span>S.size<span style="color: #c678dd;">()</span> + 1, -1<span style="color: #51afef;">)</span>;
+<span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">k</span> = -1;
+<span style="color: #51afef;">for</span> <span style="color: #51afef;">(</span><span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">i</span> = 0; i &lt; S.size<span style="color: #c678dd;">()</span>; ++i<span style="color: #51afef;">)</span> <span style="color: #51afef;">{</span>
+    k = x<span style="color: #c678dd;">[</span>i<span style="color: #c678dd;">]</span>;
+    <span style="color: #51afef;">while</span> <span style="color: #c678dd;">(</span>k &gt; -1 <span style="color: #51afef;">and</span> S<span style="color: #98be65;">[</span>i<span style="color: #98be65;">]</span> != S<span style="color: #98be65;">[</span>k<span style="color: #98be65;">]</span><span style="color: #c678dd;">)</span> k = x<span style="color: #c678dd;">[</span>k<span style="color: #c678dd;">]</span>;
+    <span style="color: #5B6268;">//</span><span style="color: #5B6268;">While S[i] != S[x_{i}] we check for the longest border of the longest border.</span>
+    <span style="color: #5B6268;">//</span><span style="color: #5B6268;">If we never find a match that means that the longest border is empty</span>
+    x<span style="color: #c678dd;">[</span>i+1<span style="color: #c678dd;">]</span> = k+1; <span style="color: #5B6268;">// </span><span style="color: #5B6268;">We know that x_{i+1} is the length of the last border + 1</span>
+<span style="color: #51afef;">}</span>
+</pre>
+</div>
+</div>
+</div>
+<div id="outline-container-sec-1-2-3" class="outline-4">
+<h4 id="sec-1-2-3"><span class="section-number-4">1.2.3</span> <b>Complexity Analysis</b></h4>
+<div class="outline-text-4" id="text-1-2-3">
+<p>
+So after checking on this code you might wonder the complexity of KMP
+and doubt my claim that it is linear, lets prove it.<br >
+In our code we have 2 loops, the outer loop and the inner loop. Let's
+calculate maximum number of iterations by checking how many possible
+modifications we can make to <b>k</b>, notice when we change go to the next
+iteration k increases by one. Check that this code is equivalent to
+the last one.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-cpp"><span style="color: #51afef;">for</span> <span style="color: #51afef;">(</span><span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">i</span> = 0; i &lt; S.size<span style="color: #c678dd;">()</span>; ++i, ++k<span style="color: #51afef;">)</span> <span style="color: #51afef;">{</span>
+    <span style="color: #51afef;">while</span> <span style="color: #c678dd;">(</span>k &gt; -1 <span style="color: #51afef;">and</span> S<span style="color: #98be65;">[</span>i<span style="color: #98be65;">]</span> != S<span style="color: #98be65;">[</span>k<span style="color: #98be65;">]</span><span style="color: #c678dd;">)</span> k = x<span style="color: #c678dd;">[</span>k<span style="color: #c678dd;">]</span>;
+    x<span style="color: #c678dd;">[</span>i+1<span style="color: #c678dd;">]</span> = k+1;
+<span style="color: #51afef;">}</span>
+</pre>
+</div>
+
+<p>
+In the inner loop we decrease <b>k</b> by a non zero value at each iteration,
+but never to a value below 0. <br >
+What does it mean? We know that we increase <b>k |S|</b> times, and we can
+decrease it to 0 as many times as we want, but as we have only
+increase it <b>|S|</b> times it is impossible to decrease it more times as
+then <b>k</b> would forcefully be negative. Hence we at most do <b>2|S|</b>
+iterations.
+</p>
+
+<p>
+If you understood the above correctly remember that what we did by
+going to <b>x<sub>x<sub>i</sub></sub></b> (k = x[k]) is akin navigating through the
+<b>suffix links</b>, where a suffix link points to the longest border.  Now
+you should be able to see if S is a substring of T in linear time, you
+can try it out in this link <a href="https://jutge.org/problems/P33597_en">Online Jutge</a> (You might need an account
+first).
+</p>
+</div>
+</div>
+</div>
+</div>
+
+
+
+<div id="outline-container-sec-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> <b>String Matching and AhoCorasick</b></h2>
+<div class="outline-text-2" id="text-2">
+<p>
+Now let's consider a new problem, we are given <b>M</b> patterns <b>P<sub>i</sub></b> and are asked to see if they appear in a string <b>S</b>.
+</p>
+</div>
+
+<div id="outline-container-sec-2-1" class="outline-3">
+<h3 id="sec-2-1"><span class="section-number-3">2.1</span> <b>Naive Solution</b></h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+Now the naive solution can be comparing each of the <b>M</b> strings to
+match against <b>S</b>, which gives us a
+\(O(\sum\limits_i^M |P_{i}| * |S|)\), if we decide to use the KMP
+method here it would still give us a $O(M*|S|) which seems good
+enough, can we do better though?
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-2-2" class="outline-3">
+<h3 id="sec-2-2"><span class="section-number-3">2.2</span> <b>Generalizaing the KMP algorithm</b></h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+We have seen that the KMP algorithm is every fast when matching a
+single string, how can we generalize it to multiple patterns? <br >
+Let's create an <b>Automata</b> to represent the data, an <b>Automata</b> is
+simply a graph where the <b>Nodes are states</b> and <b>Edges are
+transitions</b>, there is also a <b>Initial state</b> and some <b>End
+states</b> that indicate that a pattern ends at that <b>state</b>. <br >
+</p>
+</div>
+
+<div id="outline-container-sec-2-2-1" class="outline-4">
+<h4 id="sec-2-2-1"><span class="section-number-4">2.2.1</span> <b>Building the skeleton</b></h4>
+<div class="outline-text-4" id="text-2-2-1">
+<p>
+How would we want the automata so we can solve our problem easily?
+First of all we would need it to lead us to a <b>End state</b> if we
+feed a pattern to it at the <b>Initial State</b>. The way to build this
+is simply using a <b>Trie</b>, this will be the skeleton of our Automata. <br >
+I won't go into too much detail, as it is a very elementary data-structure.
+This should be your standard Trie Building function:
+</p>
+<div class="org-src-container">
+
+<pre class="src src-cpp"><span style="color: #51afef;">struct</span> <span style="color: #ECBE7B;">node</span><span style="color: #51afef;">{</span>
+    <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">nxt</span><span style="color: #c678dd;">[</span>Alpha<span style="color: #c678dd;">]</span> = <span style="color: #c678dd;">{}</span>; <span style="color: #5B6268;">//</span><span style="color: #5B6268;">Alpha is the number of transitions.</span>
+    <span style="color: #ECBE7B;">char</span> <span style="color: #dcaeea;">c</span>;
+<span style="color: #51afef;">}</span>;
+<span style="color: #ECBE7B;">vector</span><span style="color: #51afef;">&lt;</span><span style="color: #ECBE7B;">node</span><span style="color: #51afef;">&gt;</span> <span style="color: #dcaeea;">V</span><span style="color: #51afef;">(</span>1000000<span style="color: #51afef;">)</span>;
+<span style="color: #5B6268;">//</span><span style="color: #5B6268;">0 will be our initial state</span>
+
+<span style="color: #ECBE7B;">int</span> <span style="color: #c678dd;">getval</span><span style="color: #51afef;">(</span><span style="color: #ECBE7B;">char</span> <span style="color: #dcaeea;">c</span><span style="color: #51afef;">)</span>; <span style="color: #5B6268;">//</span><span style="color: #5B6268;">we map each transition to an integer.</span>
+<span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">lst</span> = 1;
+<span style="color: #ECBE7B;">void</span> <span style="color: #c678dd;">BuildTrie</span><span style="color: #51afef;">(</span><span style="color: #ECBE7B;">vector</span><span style="color: #c678dd;">&lt;</span><span style="color: #ECBE7B;">string</span><span style="color: #c678dd;">&gt;</span> &amp;<span style="color: #dcaeea;">v</span><span style="color: #51afef;">)</span> <span style="color: #51afef;">{</span>
+    <span style="color: #51afef;">for</span><span style="color: #c678dd;">(</span><span style="color: #51afef;">auto</span> &amp;<span style="color: #dcaeea;">s</span> : v<span style="color: #c678dd;">)</span> <span style="color: #c678dd;">{</span>
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">pos</span> = 0;
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span><span style="color: #ECBE7B;">char</span> &amp;<span style="color: #dcaeea;">c</span> : s<span style="color: #98be65;">)</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #da8548;">(</span>c<span style="color: #da8548;">)</span>;
+            <span style="color: #51afef;">if</span><span style="color: #da8548;">(</span><span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>val<span style="color: #a9a1e1;">]</span><span style="color: #da8548;">)</span> <span style="color: #da8548;">{</span>
+                V<span style="color: #a9a1e1;">[</span>lst<span style="color: #a9a1e1;">]</span>.c = c; V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>val<span style="color: #a9a1e1;">]</span> = lst++;
+                SaveSomeData<span style="color: #a9a1e1;">()</span>;
+                <span style="color: #5B6268;">//</span><span style="color: #5B6268;">suppose we save some needed information here</span>
+            <span style="color: #da8548;">}</span>
+            pos = V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.nxt<span style="color: #da8548;">[</span>val<span style="color: #da8548;">]</span>;
+        <span style="color: #98be65;">}</span>
+        SaveSomeEndStateData<span style="color: #98be65;">()</span>;
+        <span style="color: #5B6268;">//</span><span style="color: #5B6268;">suppose we save some data at the End State</span>
+    <span style="color: #c678dd;">}</span>
+<span style="color: #51afef;">}</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-2-2-2" class="outline-4">
+<h4 id="sec-2-2-2"><span class="section-number-4">2.2.2</span> <b>Building the rest</b></h4>
+<div class="outline-text-4" id="text-2-2-2">
+<p>
+Now we ask ourselves a question, what if in the middle of the pattern
+we encounter a Char which has no corresponding transition? <br >
+Let's think what we did in the KMP, whenever we found a matching
+character we simply increased the border by one, what we would do here
+is go to the next state. Whenever we found a not matching character we
+would compare it to <b>x<sub>x<sub>i</sub></sub></b>. We are going to do the same here. We
+are going to find the "Prefix Function" in our Automata.
+</p>
+</div>
+
+<ol class="org-ol"><li><a id="sec-2-2-2-1" name="sec-2-2-2-1"></a><b>"Prefix Funtion"</b> in the Trie<br ><div class="outline-text-5" id="text-2-2-2-1">
+<p>
+Let's think about the <b>Prefix funtion</b> again, it said that
+<b>S[0..x<sub>i</sub>]</b> was a longest prefix of <b>S</b> that was also a suffix of
+<b>S[0..i]</b>. Now there are multiple strings, how do we generalize this?
+Imagine we are looking for the prefix funtion of <b>S[0..i]</b>, we would
+want to look for the longest Prefix <b>P</b> that was also a Suffix
+of <b>S[0..i]</b>, as the letters we can reuse are only the last few we have
+fed to the Trie. <b>P</b> here must be the pattern needed to go to another
+state of the Trie.
+It's easy to see that this behaves the same way as the <b>prefix function</b>. So we can write this code:
+</p>
+<div class="org-src-container">
+
+<pre class="src src-cpp"><span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #51afef;">(</span>V<span style="color: #c678dd;">[</span>pos<span style="color: #c678dd;">]</span>.c<span style="color: #51afef;">)</span>;
+
+<span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">k</span> = V<span style="color: #51afef;">[</span>V<span style="color: #c678dd;">[</span>pos<span style="color: #c678dd;">]</span>.p<span style="color: #51afef;">]</span>.SuffixLink;
+<span style="color: #51afef;">while</span><span style="color: #51afef;">(</span>k &gt; -1 &amp;&amp; <span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #c678dd;">[</span>k<span style="color: #c678dd;">]</span>.nxt<span style="color: #c678dd;">[</span>val<span style="color: #c678dd;">]</span><span style="color: #51afef;">)</span> k = V<span style="color: #51afef;">[</span>k<span style="color: #51afef;">]</span>.SuffixLink;
+<span style="color: #51afef;">if</span><span style="color: #51afef;">(</span>k == -1<span style="color: #51afef;">)</span> V<span style="color: #51afef;">[</span>pos<span style="color: #51afef;">]</span>.SuffixLink = 0;
+<span style="color: #51afef;">else</span> <span style="color: #51afef;">{</span>
+     V<span style="color: #c678dd;">[</span>pos<span style="color: #c678dd;">]</span>.SuffixLink = V<span style="color: #c678dd;">[</span>k<span style="color: #c678dd;">]</span>.nxt<span style="color: #c678dd;">[</span>val<span style="color: #c678dd;">]</span>;
+<span style="color: #51afef;">}</span>
+</pre>
+</div>
+
+<p>
+Notice that we now call <b>x<sub>i</sub></b> the <b>SuffixLink</b>, when k = -1, we would
+assign 0 but now in a general case we assign <b>V[k].nxt[val]</b>; This is
+the same as we did before, when we go out of the inner loop we know
+that we can increase the border by one, but now we can increase it
+with a few different chars, so we simply tell it to point to the one
+corresponding to our char.
+</p>
+
+<p>
+Something you might have noticed is that we assume that
+V[k].SuffixLink has been computed for all the values of V[k]. How can
+we assure that? One key idea is that the Prefix pointed by SuffixLink
+must be shorter than me, as if not it would not be a proper suffix of
+my string, that means that if we build the Suffix Links by increasing
+length we would have no problem. Let's do this by using a bfs.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-cpp"><span style="color: #ECBE7B;">void</span> <span style="color: #c678dd;">CreateSuffixLink</span><span style="color: #51afef;">()</span> <span style="color: #51afef;">{</span>
+    <span style="color: #ECBE7B;">queue</span><span style="color: #c678dd;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #c678dd;">&gt;</span> <span style="color: #dcaeea;">q</span>;
+    <span style="color: #51afef;">for</span><span style="color: #c678dd;">(</span>q.push<span style="color: #98be65;">(</span>0<span style="color: #98be65;">)</span>; q.size<span style="color: #98be65;">()</span>; q.pop<span style="color: #98be65;">()</span><span style="color: #c678dd;">)</span> <span style="color: #c678dd;">{</span>
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">pos</span> = q.front<span style="color: #98be65;">()</span>;
+        <span style="color: #51afef;">if</span><span style="color: #98be65;">(</span><span style="color: #51afef; font-weight: bold;">!</span>pos<span style="color: #98be65;">)</span> V<span style="color: #98be65;">[</span>pos<span style="color: #98be65;">]</span>.SuffixLink = -1;
+        <span style="color: #51afef;">else</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #da8548;">(</span>V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.c<span style="color: #da8548;">)</span>;
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">j</span> = V<span style="color: #da8548;">[</span>V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.p<span style="color: #da8548;">]</span>.SuffixLink;
+            <span style="color: #51afef;">while</span><span style="color: #da8548;">(</span>j &gt; -1 &amp;&amp; <span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #a9a1e1;">[</span>j<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>val<span style="color: #a9a1e1;">]</span><span style="color: #da8548;">)</span> j = V<span style="color: #da8548;">[</span>j<span style="color: #da8548;">]</span>.SuffixLink;
+            <span style="color: #51afef;">if</span><span style="color: #da8548;">(</span>j == -1<span style="color: #da8548;">)</span> V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.SuffixLink = 0;
+            <span style="color: #51afef;">else</span> <span style="color: #da8548;">{</span>
+                V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.SuffixLink = V<span style="color: #a9a1e1;">[</span>j<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>val<span style="color: #a9a1e1;">]</span>;
+                SaveSomeSUffixLinkData<span style="color: #a9a1e1;">()</span>;
+                <span style="color: #5B6268;">//</span><span style="color: #5B6268;">Suppose we want to know some info about out SuffixLink</span>
+            <span style="color: #da8548;">}</span>
+
+        <span style="color: #98be65;">}</span>
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span><span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">i</span> = 0; i &lt; Alpha; ++i<span style="color: #98be65;">)</span> <span style="color: #51afef;">if</span><span style="color: #98be65;">(</span>V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.nxt<span style="color: #da8548;">[</span>i<span style="color: #da8548;">]</span><span style="color: #98be65;">)</span> q.push<span style="color: #98be65;">(</span>V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.nxt<span style="color: #da8548;">[</span>i<span style="color: #da8548;">]</span><span style="color: #98be65;">)</span>;
+    <span style="color: #c678dd;">}</span>
+<span style="color: #51afef;">}</span>
+</pre>
+</div>
+
+<p>
+So now we can do the same as the KMP Matching, whenever we fail a
+match we can go to its <b>Prefix function/SuffixLink</b> and check if we
+can increase the border at that point. So our navigating funcion will be:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-cpp"><span style="color: #ECBE7B;">void</span> <span style="color: #c678dd;">find</span><span style="color: #51afef;">(</span><span style="color: #ECBE7B;">string</span>&amp; <span style="color: #dcaeea;">word</span><span style="color: #51afef;">)</span> <span style="color: #51afef;">{</span>
+    <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">pos</span> = 0;
+    <span style="color: #51afef;">for</span><span style="color: #c678dd;">(</span><span style="color: #51afef;">auto</span> &amp;<span style="color: #dcaeea;">c</span> : word<span style="color: #c678dd;">)</span> <span style="color: #c678dd;">{</span>
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #98be65;">(</span>c<span style="color: #98be65;">)</span>;
+        <span style="color: #51afef;">while</span><span style="color: #98be65;">(</span>pos &gt; -1 &amp;&amp; <span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.nxt<span style="color: #da8548;">[</span>val<span style="color: #da8548;">]</span><span style="color: #98be65;">)</span> pos = V<span style="color: #98be65;">[</span>pos<span style="color: #98be65;">]</span>.SuffixLink;
+        <span style="color: #51afef;">if</span><span style="color: #98be65;">(</span>pos == -1<span style="color: #98be65;">)</span> pos = 0;
+        <span style="color: #51afef;">else</span> pos = V<span style="color: #98be65;">[</span>pos<span style="color: #98be65;">]</span>.nxt<span style="color: #98be65;">[</span>val<span style="color: #98be65;">]</span>;
+    <span style="color: #c678dd;">}</span>
+<span style="color: #51afef;">}</span>
+</pre>
+</div>
+
+<p>
+Now you might ask what happens if my Suffixlink is a <b>End state</b>, how
+do I know I have visited it? The answer is easy: in
+<i>SaveSomeSuffixLinkData()</i> we save to our state if our suffix link was
+an <b>Ending state</b>. <br >
+What if the SuffixLink of the SuffixLink is an
+<b>Ending State</b>? We have to notice one more property of our
+SuffixLinks: If we only follow the SuffixLinks we create a DAG (it's
+impossible to have a cycle as SuffixLink only go to shorter strings)
+And as the SuffixLink of a SuffixLink is still out Border we will
+visit <b>ALL</b> borders of our state, hence it is enough if we push up the
+Trie if any SuffixLink was an <b>Ending state</b>.
+</p>
+
+<p>
+Now we have enough Knowledge to implement our first Aho-Corasick Trie:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-cpp"><span style="color: #51afef;">struct</span> <span style="color: #ECBE7B;">Trie</span><span style="color: #51afef;">{</span>
+    <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">lst</span> = 1;
+    <span style="color: #51afef;">struct</span> <span style="color: #ECBE7B;">node</span><span style="color: #c678dd;">{</span>
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">nxt</span><span style="color: #98be65;">[</span>Alpha<span style="color: #98be65;">]</span> = <span style="color: #98be65;">{}</span>, <span style="color: #dcaeea;">p</span> = -1;
+        <span style="color: #ECBE7B;">char</span> <span style="color: #dcaeea;">c</span>;
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">end</span> = 0;
+        <span style="color: #5B6268;">//</span><span style="color: #5B6268;">bitset&lt;MaxN&gt; bitmask;</span>
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">SuffixLink</span>;
+    <span style="color: #c678dd;">}</span>;
+    <span style="color: #ECBE7B;">vector</span><span style="color: #c678dd;">&lt;</span><span style="color: #ECBE7B;">node</span><span style="color: #c678dd;">&gt;</span> <span style="color: #dcaeea;">V</span>;
+
+    <span style="color: #51afef;">inline</span> <span style="color: #ECBE7B;">int</span> <span style="color: #c678dd;">getval</span><span style="color: #c678dd;">(</span><span style="color: #ECBE7B;">char</span> <span style="color: #dcaeea;">c</span><span style="color: #c678dd;">)</span>;
+
+    <span style="color: #ECBE7B;">void</span> <span style="color: #c678dd;">CreateSuffixLink</span><span style="color: #c678dd;">()</span> <span style="color: #c678dd;">{</span>
+        <span style="color: #ECBE7B;">queue</span><span style="color: #98be65;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #98be65;">&gt;</span> <span style="color: #dcaeea;">q</span>;
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span>q.push<span style="color: #da8548;">(</span>0<span style="color: #da8548;">)</span>; q.size<span style="color: #da8548;">()</span>; q.pop<span style="color: #da8548;">()</span><span style="color: #98be65;">)</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">pos</span> = q.front<span style="color: #da8548;">()</span>;
+            <span style="color: #51afef;">if</span><span style="color: #da8548;">(</span><span style="color: #51afef; font-weight: bold;">!</span>pos<span style="color: #da8548;">)</span> V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.SuffixLink = -1;
+            <span style="color: #51afef;">else</span> <span style="color: #da8548;">{</span>
+                <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #a9a1e1;">(</span><span style="color: #ECBE7B;">V</span><span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.c<span style="color: #a9a1e1;">)</span>;
+                <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">j</span> = V<span style="color: #a9a1e1;">[</span>V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.p<span style="color: #a9a1e1;">]</span>.SuffixLink;
+                <span style="color: #51afef;">while</span><span style="color: #a9a1e1;">(</span>j &gt; -1 &amp;&amp; <span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #ECBE7B;">[</span>j<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>val<span style="color: #ECBE7B;">]</span><span style="color: #a9a1e1;">)</span> j = V<span style="color: #a9a1e1;">[</span>j<span style="color: #a9a1e1;">]</span>.SuffixLink;
+                <span style="color: #51afef;">if</span><span style="color: #a9a1e1;">(</span>j == -1<span style="color: #a9a1e1;">)</span> V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.SuffixLink = 0;
+                <span style="color: #51afef;">else</span> <span style="color: #a9a1e1;">{</span>
+                    V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.SuffixLink = V<span style="color: #ECBE7B;">[</span>j<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>val<span style="color: #ECBE7B;">]</span>;
+                    V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.end |= V<span style="color: #ECBE7B;">[</span>V<span style="color: #4db5bd;">[</span>pos<span style="color: #4db5bd;">]</span>.SuffixLink<span style="color: #ECBE7B;">]</span>.end;
+                <span style="color: #a9a1e1;">}</span>
+
+            <span style="color: #da8548;">}</span>
+            <span style="color: #51afef;">for</span><span style="color: #da8548;">(</span><span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">i</span> = 0; i &lt; Alpha; ++i<span style="color: #da8548;">)</span> <span style="color: #51afef;">if</span><span style="color: #da8548;">(</span>V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>i<span style="color: #a9a1e1;">]</span><span style="color: #da8548;">)</span> q.push<span style="color: #da8548;">(</span><span style="color: #ECBE7B;">V</span><span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>i<span style="color: #a9a1e1;">]</span><span style="color: #da8548;">)</span>;
+        <span style="color: #98be65;">}</span>
+    <span style="color: #c678dd;">}</span>
+
+    <span style="color: #ECBE7B;">void</span> <span style="color: #c678dd;">init</span><span style="color: #c678dd;">(</span><span style="color: #ECBE7B;">vector</span><span style="color: #98be65;">&lt;</span><span style="color: #ECBE7B;">string</span><span style="color: #98be65;">&gt;</span> &amp;<span style="color: #dcaeea;">v</span><span style="color: #c678dd;">)</span> <span style="color: #c678dd;">{</span>
+        V.resize<span style="color: #98be65;">(</span>MaxM<span style="color: #98be65;">)</span>;
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">id</span> = 0;
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span><span style="color: #51afef;">auto</span> &amp;<span style="color: #dcaeea;">s</span> : v<span style="color: #98be65;">)</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">pos</span> = 0;
+            <span style="color: #51afef;">for</span><span style="color: #da8548;">(</span><span style="color: #ECBE7B;">char</span> &amp;<span style="color: #dcaeea;">c</span> : s<span style="color: #da8548;">)</span> <span style="color: #da8548;">{</span>
+                <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #a9a1e1;">(</span>c<span style="color: #a9a1e1;">)</span>;
+                <span style="color: #51afef;">if</span><span style="color: #a9a1e1;">(</span><span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>val<span style="color: #ECBE7B;">]</span><span style="color: #a9a1e1;">)</span> <span style="color: #a9a1e1;">{</span>
+                    V<span style="color: #ECBE7B;">[</span>lst<span style="color: #ECBE7B;">]</span>.p = pos;
+                    V<span style="color: #ECBE7B;">[</span>lst<span style="color: #ECBE7B;">]</span>.c = c;
+                    V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>val<span style="color: #ECBE7B;">]</span> = lst++;
+                <span style="color: #a9a1e1;">}</span>
+                pos = V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>val<span style="color: #a9a1e1;">]</span>;
+            <span style="color: #da8548;">}</span>
+            V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.end = 1;
+        <span style="color: #98be65;">}</span>
+        CreateSuffixLink<span style="color: #98be65;">()</span>;
+    <span style="color: #c678dd;">}</span>
+<span style="color: #51afef;">}</span>;
+</pre>
+</div>
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-2-2-3" class="outline-4">
+<h4 id="sec-2-2-3"><span class="section-number-4">2.2.3</span> <b>Trimming the Code</b></h4>
+<div class="outline-text-4" id="text-2-2-3">
+<p>
+Now we have to modify this Trie according to the problem, what if we
+dont want to know if some pattern appears but also <b>How many times
+each pattern appears</b>? The naive idea would be simply going down the
+path created by Suffixlinks and add in some vector whenever we go
+through some <b>End State</b> but that would be too slow. <br >
+<b>Remember this property</b>: If we only follow the SuffixLinks we create a DAG. That
+means that we can simply compute the answer lazily, we go through all
+the states and store for each state how many times we have been there,
+then we can easily calculate how many times we have been in each
+state + how many times we would be there using Suffixlinks by
+processing in ReverseBfs order.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-cpp"><span style="color: #51afef;">struct</span> <span style="color: #ECBE7B;">Trie</span><span style="color: #51afef;">{</span>
+    <span style="color: #51afef;">static</span> <span style="color: #51afef;">const</span> <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">Alpha</span> = 26;
+    <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">lst</span> = 1;
+    <span style="color: #51afef;">struct</span> <span style="color: #ECBE7B;">node</span><span style="color: #c678dd;">{</span>
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">nxt</span><span style="color: #98be65;">[</span>Alpha<span style="color: #98be65;">]</span> = <span style="color: #98be65;">{}</span>, <span style="color: #dcaeea;">p</span> = -1;
+        <span style="color: #ECBE7B;">char</span> <span style="color: #dcaeea;">c</span>;
+        <span style="color: #ECBE7B;">vector</span><span style="color: #98be65;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #98be65;">&gt;</span> <span style="color: #dcaeea;">end</span>;
+        <span style="color: #5B6268;">//</span><span style="color: #5B6268;">bitset&lt;MaxN&gt; bitmask;</span>
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">SuffixLink</span>;
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">cnt</span> = 0;
+    <span style="color: #c678dd;">}</span>;
+    <span style="color: #ECBE7B;">vector</span><span style="color: #c678dd;">&lt;</span><span style="color: #ECBE7B;">node</span><span style="color: #c678dd;">&gt;</span> <span style="color: #dcaeea;">V</span>;
+    <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">num</span>;
+    <span style="color: #ECBE7B;">stack</span><span style="color: #c678dd;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #c678dd;">&gt;</span> <span style="color: #dcaeea;">reversebfs</span>;
+
+    <span style="color: #51afef;">inline</span> <span style="color: #ECBE7B;">int</span> <span style="color: #c678dd;">getval</span><span style="color: #c678dd;">(</span><span style="color: #ECBE7B;">char</span> <span style="color: #dcaeea;">c</span><span style="color: #c678dd;">)</span>;
+
+    <span style="color: #ECBE7B;">void</span> <span style="color: #c678dd;">CreateSuffixLink</span><span style="color: #c678dd;">()</span> <span style="color: #c678dd;">{</span>
+        <span style="color: #ECBE7B;">queue</span><span style="color: #98be65;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #98be65;">&gt;</span> <span style="color: #dcaeea;">q</span>;
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span>q.push<span style="color: #da8548;">(</span>0<span style="color: #da8548;">)</span>; q.size<span style="color: #da8548;">()</span>; q.pop<span style="color: #da8548;">()</span><span style="color: #98be65;">)</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">pos</span> = q.front<span style="color: #da8548;">()</span>;
+            reversebfs.push<span style="color: #da8548;">(</span>pos<span style="color: #da8548;">)</span>;
+            <span style="color: #51afef;">if</span><span style="color: #da8548;">(</span><span style="color: #51afef; font-weight: bold;">!</span>pos<span style="color: #da8548;">)</span> V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.SuffixLink = -1;
+            <span style="color: #51afef;">else</span> <span style="color: #da8548;">{</span>
+                <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #a9a1e1;">(</span><span style="color: #ECBE7B;">V</span><span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.c<span style="color: #a9a1e1;">)</span>;
+                <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">j</span> = V<span style="color: #a9a1e1;">[</span>V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.p<span style="color: #a9a1e1;">]</span>.SuffixLink;
+                <span style="color: #51afef;">while</span><span style="color: #a9a1e1;">(</span>j &gt; -1 &amp;&amp; <span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #ECBE7B;">[</span>j<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>val<span style="color: #ECBE7B;">]</span><span style="color: #a9a1e1;">)</span> j = V<span style="color: #a9a1e1;">[</span>j<span style="color: #a9a1e1;">]</span>.SuffixLink;
+                <span style="color: #51afef;">if</span><span style="color: #a9a1e1;">(</span>j == -1<span style="color: #a9a1e1;">)</span> V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.SuffixLink = 0;
+                <span style="color: #51afef;">else</span> <span style="color: #a9a1e1;">{</span>
+                    V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.SuffixLink = V<span style="color: #ECBE7B;">[</span>j<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>val<span style="color: #ECBE7B;">]</span>;
+                    <span style="color: #5B6268;">//</span><span style="color: #5B6268;">V[pos].bitmask |= V[V[pos].SuffixLink].bitmask;</span>
+                <span style="color: #a9a1e1;">}</span>
+
+            <span style="color: #da8548;">}</span>
+            <span style="color: #51afef;">for</span><span style="color: #da8548;">(</span><span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">i</span> = 0; i &lt; Alpha; ++i<span style="color: #da8548;">)</span> <span style="color: #51afef;">if</span><span style="color: #da8548;">(</span>V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>i<span style="color: #a9a1e1;">]</span><span style="color: #da8548;">)</span> q.push<span style="color: #da8548;">(</span><span style="color: #ECBE7B;">V</span><span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>i<span style="color: #a9a1e1;">]</span><span style="color: #da8548;">)</span>;
+        <span style="color: #98be65;">}</span>
+    <span style="color: #c678dd;">}</span>
+
+    <span style="color: #ECBE7B;">void</span> <span style="color: #c678dd;">init</span><span style="color: #c678dd;">(</span><span style="color: #ECBE7B;">vector</span><span style="color: #98be65;">&lt;</span><span style="color: #ECBE7B;">string</span><span style="color: #98be65;">&gt;</span> &amp;<span style="color: #dcaeea;">v</span><span style="color: #c678dd;">)</span> <span style="color: #c678dd;">{</span>
+        V.resize<span style="color: #98be65;">(</span>MaxM<span style="color: #98be65;">)</span>;
+        num = v.size<span style="color: #98be65;">()</span>;
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">id</span> = 0;
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span><span style="color: #51afef;">auto</span> &amp;<span style="color: #dcaeea;">s</span> : v<span style="color: #98be65;">)</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">pos</span> = 0;
+            <span style="color: #51afef;">for</span><span style="color: #da8548;">(</span><span style="color: #ECBE7B;">char</span> &amp;<span style="color: #dcaeea;">c</span> : s<span style="color: #da8548;">)</span> <span style="color: #da8548;">{</span>
+                <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #a9a1e1;">(</span>c<span style="color: #a9a1e1;">)</span>;
+                <span style="color: #51afef;">if</span><span style="color: #a9a1e1;">(</span><span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>val<span style="color: #ECBE7B;">]</span><span style="color: #a9a1e1;">)</span> <span style="color: #a9a1e1;">{</span>
+                    V<span style="color: #ECBE7B;">[</span>lst<span style="color: #ECBE7B;">]</span>.p = pos; V<span style="color: #ECBE7B;">[</span>lst<span style="color: #ECBE7B;">]</span>.c = c; V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>val<span style="color: #ECBE7B;">]</span> = lst++;
+                <span style="color: #a9a1e1;">}</span>
+                pos = V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>val<span style="color: #a9a1e1;">]</span>;
+            <span style="color: #da8548;">}</span>
+            V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.end.emplace_back<span style="color: #da8548;">(</span>id++<span style="color: #da8548;">)</span>;
+        <span style="color: #98be65;">}</span>
+        CreateSuffixLink<span style="color: #98be65;">()</span>;
+    <span style="color: #c678dd;">}</span>
+
+    <span style="color: #ECBE7B;">vector</span><span style="color: #c678dd;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #c678dd;">&gt;</span> <span style="color: #c678dd;">find</span><span style="color: #c678dd;">(</span><span style="color: #ECBE7B;">string</span>&amp; <span style="color: #dcaeea;">word</span><span style="color: #c678dd;">)</span> <span style="color: #c678dd;">{</span>
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">pos</span> = 0;
+        <span style="color: #ECBE7B;">vector</span><span style="color: #98be65;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #98be65;">&gt;</span> <span style="color: #dcaeea;">ans</span><span style="color: #98be65;">(</span>num, 0<span style="color: #98be65;">)</span>;
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span><span style="color: #51afef;">auto</span> &amp;<span style="color: #dcaeea;">c</span> : word<span style="color: #98be65;">)</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #da8548;">(</span>c<span style="color: #da8548;">)</span>;
+            <span style="color: #51afef;">while</span><span style="color: #da8548;">(</span>pos &gt; -1 &amp;&amp; <span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>val<span style="color: #a9a1e1;">]</span><span style="color: #da8548;">)</span> pos = V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.SuffixLink;
+            <span style="color: #51afef;">if</span><span style="color: #da8548;">(</span>pos == -1<span style="color: #da8548;">)</span> pos = 0;
+            <span style="color: #51afef;">else</span> pos = V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.nxt<span style="color: #da8548;">[</span>val<span style="color: #da8548;">]</span>;
+            V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.cnt++; <span style="color: #5B6268;">//</span><span style="color: #5B6268;">We count the times we reach each node, and then do a reverse propagation</span>
+        <span style="color: #98be65;">}</span>
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span>;reversebfs.size<span style="color: #da8548;">()</span>;reversebfs.pop<span style="color: #da8548;">()</span><span style="color: #98be65;">)</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">x</span> = reversebfs.top<span style="color: #da8548;">()</span>; <span style="color: #5B6268;">//</span><span style="color: #5B6268;">When we process x, we know we have been there V[x].cnt times;</span>
+            <span style="color: #51afef;">for</span><span style="color: #da8548;">(</span><span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">i</span> : V<span style="color: #a9a1e1;">[</span>x<span style="color: #a9a1e1;">]</span>.end<span style="color: #da8548;">)</span> ans<span style="color: #da8548;">[</span>i<span style="color: #da8548;">]</span> += V<span style="color: #da8548;">[</span>x<span style="color: #da8548;">]</span>.cnt;
+            <span style="color: #51afef;">if</span><span style="color: #da8548;">(</span>V<span style="color: #a9a1e1;">[</span>x<span style="color: #a9a1e1;">]</span>.SuffixLink != -1<span style="color: #da8548;">)</span> V<span style="color: #da8548;">[</span>V<span style="color: #a9a1e1;">[</span>x<span style="color: #a9a1e1;">]</span>.SuffixLink<span style="color: #da8548;">]</span>.cnt += V<span style="color: #da8548;">[</span>x<span style="color: #da8548;">]</span>.cnt;
+        <span style="color: #98be65;">}</span>
+        <span style="color: #51afef;">return</span> ans;
+    <span style="color: #c678dd;">}</span>
+<span style="color: #51afef;">}</span>;
+</pre>
+</div>
+
+<p>
+And last straight forward optimization we can add is the following: we see that this failure block appears many times:
+</p>
+<div class="org-src-container">
+
+<pre class="src src-cpp"><span style="color: #51afef;">while</span><span style="color: #51afef;">(</span>pos &gt; -1 &amp;&amp; <span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #c678dd;">[</span>pos<span style="color: #c678dd;">]</span>.nxt<span style="color: #c678dd;">[</span>val<span style="color: #c678dd;">]</span><span style="color: #51afef;">)</span> pos = V<span style="color: #51afef;">[</span>pos<span style="color: #51afef;">]</span>.SuffixLink;
+<span style="color: #51afef;">if</span><span style="color: #51afef;">(</span>pos == -1<span style="color: #51afef;">)</span> pos = 0;
+<span style="color: #51afef;">else</span> pos = V<span style="color: #51afef;">[</span>pos<span style="color: #51afef;">]</span>.nxt<span style="color: #51afef;">[</span>val<span style="color: #51afef;">]</span>;
+</pre>
+</div>
+
+<p>
+Why don't we simply save this as a transition?
+</p>
+
+<p>
+Finally our Aho-Corasick Trie becomes this:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-cpp"><span style="color: #51afef;">const</span> <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">MaxM</span> = 200005;
+
+<span style="color: #51afef;">struct</span> <span style="color: #ECBE7B;">Trie</span><span style="color: #51afef;">{</span>
+    <span style="color: #51afef;">static</span> <span style="color: #51afef;">const</span> <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">Alpha</span> = 26;
+    <span style="color: #51afef;">static</span> <span style="color: #51afef;">const</span> <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">first</span> = <span style="color: #98be65;">'a'</span>;
+    <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">lst</span> = 1;
+    <span style="color: #51afef;">struct</span> <span style="color: #ECBE7B;">node</span><span style="color: #c678dd;">{</span>
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">nxt</span><span style="color: #98be65;">[</span>Alpha<span style="color: #98be65;">]</span> = <span style="color: #98be65;">{}</span>, <span style="color: #dcaeea;">p</span> = -1;
+        <span style="color: #ECBE7B;">char</span> <span style="color: #dcaeea;">c</span>;
+        <span style="color: #ECBE7B;">vector</span><span style="color: #98be65;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #98be65;">&gt;</span> <span style="color: #dcaeea;">end</span>; <span style="color: #5B6268;">//</span><span style="color: #5B6268;">if 2 patterns must be different, change to int end = -1;</span>
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">SuffixLink</span>;
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">cnt</span> = 0;
+    <span style="color: #c678dd;">}</span>;
+    <span style="color: #ECBE7B;">vector</span><span style="color: #c678dd;">&lt;</span><span style="color: #ECBE7B;">node</span><span style="color: #c678dd;">&gt;</span> <span style="color: #c678dd;">V</span><span style="color: #c678dd;">(</span>MaxM<span style="color: #c678dd;">)</span>;
+    <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">num</span>;
+    <span style="color: #ECBE7B;">stack</span><span style="color: #c678dd;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #c678dd;">&gt;</span> <span style="color: #dcaeea;">reversebfs</span>;
+    <span style="color: #51afef;">inline</span> <span style="color: #ECBE7B;">int</span> <span style="color: #c678dd;">getval</span><span style="color: #c678dd;">(</span><span style="color: #ECBE7B;">char</span> <span style="color: #dcaeea;">c</span><span style="color: #c678dd;">)</span> <span style="color: #c678dd;">{</span>
+        <span style="color: #51afef;">return</span> c - first;
+    <span style="color: #c678dd;">}</span>
+
+    <span style="color: #ECBE7B;">void</span> <span style="color: #c678dd;">CreateSuffixLink</span><span style="color: #c678dd;">()</span> <span style="color: #c678dd;">{</span>
+        <span style="color: #ECBE7B;">queue</span><span style="color: #98be65;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #98be65;">&gt;</span> <span style="color: #dcaeea;">q</span>;
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span>q.push<span style="color: #da8548;">(</span>0<span style="color: #da8548;">)</span>; q.size<span style="color: #da8548;">()</span>; q.pop<span style="color: #da8548;">()</span><span style="color: #98be65;">)</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">pos</span> = q.front<span style="color: #da8548;">()</span>;
+            reversebfs.push<span style="color: #da8548;">(</span>pos<span style="color: #da8548;">)</span>;
+            <span style="color: #51afef;">for</span><span style="color: #da8548;">(</span><span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">i</span> = 0; i &lt; Alpha; ++i<span style="color: #da8548;">)</span> <span style="color: #da8548;">{</span>
+                <span style="color: #51afef;">if</span><span style="color: #a9a1e1;">(</span>V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>i<span style="color: #ECBE7B;">]</span><span style="color: #a9a1e1;">)</span> q.push<span style="color: #a9a1e1;">(</span><span style="color: #ECBE7B;">V</span><span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>i<span style="color: #ECBE7B;">]</span><span style="color: #a9a1e1;">)</span>;
+                <span style="color: #51afef;">else</span> <span style="color: #51afef;">if</span><span style="color: #a9a1e1;">(</span><span style="color: #51afef; font-weight: bold;">!</span>pos || <span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.p<span style="color: #a9a1e1;">)</span> <span style="color: #a9a1e1;">{</span>
+                    V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.SuffixLink = 0;
+                    V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>i<span style="color: #ECBE7B;">]</span> = V<span style="color: #ECBE7B;">[</span>0<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>i<span style="color: #ECBE7B;">]</span>;
+                <span style="color: #a9a1e1;">}</span>
+                <span style="color: #51afef;">else</span> <span style="color: #a9a1e1;">{</span>
+                    <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #ECBE7B;">(</span><span style="color: #ECBE7B;">V</span><span style="color: #4db5bd;">[</span>pos<span style="color: #4db5bd;">]</span>.c<span style="color: #ECBE7B;">)</span>;
+                    <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">j</span> = V<span style="color: #ECBE7B;">[</span>V<span style="color: #4db5bd;">[</span>pos<span style="color: #4db5bd;">]</span>.p<span style="color: #ECBE7B;">]</span>.SuffixLink;
+                    V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.SuffixLink = V<span style="color: #ECBE7B;">[</span>j<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>val<span style="color: #ECBE7B;">]</span>;
+                    <span style="color: #5B6268;">//</span><span style="color: #5B6268;">We guarantee that V[j].nxt saves all the possible transitions using SuffixLinks</span>
+                    V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>i<span style="color: #ECBE7B;">]</span> = V<span style="color: #ECBE7B;">[</span>V<span style="color: #4db5bd;">[</span>pos<span style="color: #4db5bd;">]</span>.SuffixLink<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>i<span style="color: #ECBE7B;">]</span>;
+                <span style="color: #a9a1e1;">}</span>
+            <span style="color: #da8548;">}</span>
+        <span style="color: #98be65;">}</span>
+    <span style="color: #c678dd;">}</span>
+
+    <span style="color: #ECBE7B;">void</span> <span style="color: #c678dd;">init</span><span style="color: #c678dd;">(</span><span style="color: #ECBE7B;">vector</span><span style="color: #98be65;">&lt;</span><span style="color: #ECBE7B;">string</span><span style="color: #98be65;">&gt;</span> &amp;<span style="color: #dcaeea;">v</span><span style="color: #c678dd;">)</span> <span style="color: #c678dd;">{</span>
+        num = v.size<span style="color: #98be65;">()</span>;
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">id</span> = 0;
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span><span style="color: #51afef;">auto</span> &amp;<span style="color: #dcaeea;">s</span> : v<span style="color: #98be65;">)</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">pos</span> = 0;
+            <span style="color: #51afef;">for</span><span style="color: #da8548;">(</span><span style="color: #ECBE7B;">char</span> &amp;<span style="color: #dcaeea;">c</span> : s<span style="color: #da8548;">)</span> <span style="color: #da8548;">{</span>
+                <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #a9a1e1;">(</span>c<span style="color: #a9a1e1;">)</span>;
+                <span style="color: #51afef;">if</span><span style="color: #a9a1e1;">(</span><span style="color: #51afef; font-weight: bold;">!</span>V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>val<span style="color: #ECBE7B;">]</span><span style="color: #a9a1e1;">)</span> <span style="color: #a9a1e1;">{</span>
+                    V<span style="color: #ECBE7B;">[</span>lst<span style="color: #ECBE7B;">]</span>.p = pos; V<span style="color: #ECBE7B;">[</span>lst<span style="color: #ECBE7B;">]</span>.c = c; V<span style="color: #ECBE7B;">[</span>pos<span style="color: #ECBE7B;">]</span>.nxt<span style="color: #ECBE7B;">[</span>val<span style="color: #ECBE7B;">]</span> = lst++;
+                <span style="color: #a9a1e1;">}</span>
+                pos = V<span style="color: #a9a1e1;">[</span>pos<span style="color: #a9a1e1;">]</span>.nxt<span style="color: #a9a1e1;">[</span>val<span style="color: #a9a1e1;">]</span>;
+            <span style="color: #da8548;">}</span>
+            V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.end.emplace_back<span style="color: #da8548;">(</span>id++<span style="color: #da8548;">)</span>;
+        <span style="color: #98be65;">}</span>
+        CreateSuffixLink<span style="color: #98be65;">()</span>;
+    <span style="color: #c678dd;">}</span>
+
+    <span style="color: #ECBE7B;">vector</span><span style="color: #c678dd;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #c678dd;">&gt;</span> <span style="color: #c678dd;">find</span><span style="color: #c678dd;">(</span><span style="color: #ECBE7B;">string</span>&amp; <span style="color: #dcaeea;">word</span><span style="color: #c678dd;">)</span> <span style="color: #c678dd;">{</span>
+        <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">pos</span> = 0;
+        <span style="color: #ECBE7B;">vector</span><span style="color: #98be65;">&lt;</span><span style="color: #ECBE7B;">int</span><span style="color: #98be65;">&gt;</span> <span style="color: #dcaeea;">ans</span><span style="color: #98be65;">(</span>num, 0<span style="color: #98be65;">)</span>;
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span><span style="color: #51afef;">auto</span> &amp;<span style="color: #dcaeea;">c</span> : word<span style="color: #98be65;">)</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">val</span> = getval<span style="color: #da8548;">(</span>c<span style="color: #da8548;">)</span>;
+            pos = V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.nxt<span style="color: #da8548;">[</span>val<span style="color: #da8548;">]</span>;
+            V<span style="color: #da8548;">[</span>pos<span style="color: #da8548;">]</span>.cnt++;
+            <span style="color: #5B6268;">//</span><span style="color: #5B6268;">We count the times we reach each node, and then do a reverse propagation</span>
+        <span style="color: #98be65;">}</span>
+        <span style="color: #51afef;">for</span><span style="color: #98be65;">(</span>;reversebfs.size<span style="color: #da8548;">()</span>;reversebfs.pop<span style="color: #da8548;">()</span><span style="color: #98be65;">)</span> <span style="color: #98be65;">{</span>
+            <span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">x</span> = reversebfs.top<span style="color: #da8548;">()</span>;
+            <span style="color: #5B6268;">//</span><span style="color: #5B6268;">When we process x, we know we have been there V[x].cnt times;</span>
+            <span style="color: #51afef;">for</span><span style="color: #da8548;">(</span><span style="color: #ECBE7B;">int</span> <span style="color: #dcaeea;">i</span> : V<span style="color: #a9a1e1;">[</span>x<span style="color: #a9a1e1;">]</span>.end<span style="color: #da8548;">)</span> ans<span style="color: #da8548;">[</span>i<span style="color: #da8548;">]</span> += V<span style="color: #da8548;">[</span>x<span style="color: #da8548;">]</span>.cnt;
+            <span style="color: #51afef;">if</span><span style="color: #da8548;">(</span>V<span style="color: #a9a1e1;">[</span>x<span style="color: #a9a1e1;">]</span>.SuffixLink != -1<span style="color: #da8548;">)</span> V<span style="color: #da8548;">[</span>V<span style="color: #a9a1e1;">[</span>x<span style="color: #a9a1e1;">]</span>.SuffixLink<span style="color: #da8548;">]</span>.cnt += V<span style="color: #da8548;">[</span>x<span style="color: #da8548;">]</span>.cnt;
+        <span style="color: #98be65;">}</span>
+        <span style="color: #51afef;">return</span> ans;
+    <span style="color: #c678dd;">}</span>
+<span style="color: #51afef;">}</span>;
+
+</pre>
+</div>
+<p>
+And the Complexity is O(n+m) <br >
+Testing Problems: <a href="http://www.spoj.com/problems/STRMATCH/">SPOJ STRMATCH</a>, <a href="http://codeforces.com/gym/101174">SWERC16 Problem E</a>
+</p>
+</div>
+</div>
+</div>
+</div>
+</div><div class="col-md-3"><nav id="table-of-contents">
+<div id="text-table-of-contents" class="bs-docs-sidebar">
+<ul class="nav">
+<li><a href="#sec-1">1. <b>String Matching and KMP</b></a>
+<ul class="nav">
+<li><a href="#sec-1-1">1.1. <b>Naive Solution</b></a></li>
+<li><a href="#sec-1-2">1.2. <b>KMP O(n) Solution</b></a>
+<ul class="nav">
+<li><a href="#sec-1-2-1">1.2.1. <b>Prefix function</b></a></li>
+<li><a href="#sec-1-2-2">1.2.2. <b>KMP</b></a></li>
+<li><a href="#sec-1-2-3">1.2.3. <b>Complexity Analysis</b></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#sec-2">2. <b>String Matching and AhoCorasick</b></a>
+<ul class="nav">
+<li><a href="#sec-2-1">2.1. <b>Naive Solution</b></a></li>
+<li><a href="#sec-2-2">2.2. <b>Generalizaing the KMP algorithm</b></a>
+<ul class="nav">
+<li><a href="#sec-2-2-1">2.2.1. <b>Building the skeleton</b></a></li>
+<li><a href="#sec-2-2-2">2.2.2. <b>Building the rest</b></a></li>
+<li><a href="#sec-2-2-3">2.2.3. <b>Trimming the Code</b></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</nav>
+</div></div></div>
+<footer id="postamble" class="">
+<div><p class="author">Author: Dean Zhu</p>
+<p class="email">Email: <a href="mailto:deanzhu2@gmail.com">deanzhu2@gmail.com</a></p>
+</div>
+</footer>
+</body>
+</html>

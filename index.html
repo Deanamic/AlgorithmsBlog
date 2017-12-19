@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Dean's Homepage</title>
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
+    <!-- <link rel="stylesheet" href="css/style.css"> -->
+    <style>
+     body {
+       background-image: url("./Images/bg.png");
+	   /* background: #ffffff; */
+	   padding: 0 10px;
+	   margin: 0;
+	   font-family: 'helvetica neue', 'Open Sans', Arial, sans-serif;
+       color: #e6dede;
+     }
+
+     h1 {
+	   text-align: center;
+	   margin: 70px 0;
+     }
+
+     ul {
+	   display: -webkit-box;
+	   display: -ms-flexbox;
+	   display: flex;
+	   -webkit-box-pack: center;
+	   -ms-flex-pack: center;
+	   justify-content: center;
+	   -ms-flex-wrap: wrap;
+	   flex-wrap: wrap;
+	   list-style-type: none;
+	   padding: 0;
+     }
+
+     ul li:not(:last-child) {
+	   margin-right: 20px;
+     }
+
+     ul a {
+	   display: block;
+	   font-size: 20px;
+	   color: #e6dede;
+	   text-decoration: none;
+	   padding: 7px 15px;
+     }
+
+     ul > span {
+	   position: absolute;
+	   border-bottom: 4px solid transparent;
+	   z-index: -1;
+	   -webkit-transform: translateX(60px);
+	   transform: translateX(60px);
+     }
+
+     ul a,
+     ul > span {
+	   -webkit-transition: all .35s ease-in-out;
+	   transition: all .35s ease-in-out;
+     }
+    </style>
+  </head>
+
+  <body>
+    <h1>Hi! I'm Dean, Welcome to my Homepage</h1>
+
+    <ul id="Index">
+      <li><a href="">My Resume</a></li>
+      <li><a href="">Projects</a></li>
+      <li><a href="Algorithms/index.html">Algorithms</a></li>
+      <li><a href="">Contact</a></li>
+      <li><a href="">About</a></li>
+
+      <span></span>
+    </ul>
+
+
+    <script src="js/index.js"></script>
+  </body>
+
+</html>
