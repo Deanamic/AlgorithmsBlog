@@ -8,13 +8,13 @@ h1 {
 }
 
 .Welcome {
-    background-image:url('/PersonalWebsite/Images/WelcomeBG.jpg');
+    background-image:url('/HomePage/Images/WelcomeBG.jpg');
     background-repeat:no-repeat;
     background-position:center center;
 }
 
 #Portfolio {
-    background-image:url('/PersonalWebsite/Images/WelcomeBG.jpg');
+    background-image:url('/HomePage/Images/WelcomeBG.jpg');
     background-repeat:no-repeat;
     background-position:center center;
     margin:0px 0px 0px 0px;
