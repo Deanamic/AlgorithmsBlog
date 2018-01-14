@@ -1,0 +1,26 @@
+
+body {
+	font-family: 'helvetica neue', 'Open Sans', Arial, sans-serif;
+}
+
+h1 {
+	text-align: center;
+}
+
+.Welcome {
+    background-image:url('/PersonalWebsite/Images/WelcomeBG.jpg');
+    background-repeat:no-repeat;
+    background-position:center center;
+}
+
+#Portfolio {
+    background-image:url('/PersonalWebsite/Images/WelcomeBG.jpg');
+    background-repeat:no-repeat;
+    background-position:center center;
+    margin:0px 0px 0px 0px;
+}
+
+#AboutMe {
+    margin:0px 0px 0px 0px;
+}
+
