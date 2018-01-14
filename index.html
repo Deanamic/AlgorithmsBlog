@@ -25,12 +25,12 @@
     <div class="hidden-sm" style="position:fixed; bottom:10px; left:10px;background:none;border:none;">
       <ul style="list-style:none; margin-bottom:0px;padding:0 0 0 0;" >
         <li>
-          <a class="btn btn-social-icon btn-github"  role="button" style="margin-bottom:5px" href="https://github.com/Deanamic">
+          <a class="btn btn-social-icon btn-github" style="margin-bottom:5px" href="https://github.com/Deanamic">
         <i class="fa fa-github"></i>
       </a>
         </li>
         <li>
-      <a class="btn btn-social-icon btn-twitter" role="button">
+      <a class="btn btn-social-icon btn-twitter">
         <i class="fa fa-twitter"></i>
       </a>
         </li>
@@ -72,15 +72,19 @@
 	  </div>
 	</nav>
 
-    <div class="Welcome"  style="padding: 200px 0 200px; margin:0px 0px 0px 0px: position:center">
+    <div class="Welcome"  style="padding: 200px 0 200px; margin:0px 0px 0px 0px: position:center;">
       <h1>Hi! I'm Dean, Welcome to my Homepage</h1>
     </div>
 
 
     <div class="jumbotron" id="AboutMe">
-      <div class="container-fluid" style="max-width:900px;margin: 0px auto 0px auto">
+      <div class="container-fluid" style="max-width:900px;margin:0px auto 0px auto;">
         <h1> About Me </h1>
     <p> This is a meta reference to a about me section, I don't know what I'm writing. This website is really cool</p>
+      </div>
+    <br/>
+      <div style="text-align:center;">
+        <span id="resume" style="border:2px solid black; padding:10px 10px 10px 10px; font-size:22px;cursor: pointer"> View my Résumé </span>
       </div>
     </div>
 
@@ -89,6 +93,7 @@
       <div class="row" style="max-width:900px;margin: 0px auto 0px auto">
         <div class="col-md-6">
           <h2> Second title </h2>
+          <img src="" alt="Image">
         </div>
         <div class="col-md-6">
           <p>
@@ -97,10 +102,11 @@
         </div>
       </div>
       <div class="row" style="max-width: 900px;margin: 0px auto 0px auto">
-        <div class="col-md-6 md-push-6">
+        <div class="col-md-6 col-md-push-6">
           <h2> Second title </h2>
+          <img src="" alt="Image">
         </div>
-        <div class="col-md-6 md-pull-6">
+        <div class="col-md-6 col-md-pull-6">
           <p>
             And my second project
           </p>
@@ -115,6 +121,11 @@
     <script src="Scripts/index.js"></script>
     <script src="Scripts/jquery-3.2.1.min.js"></script>
     <script src="Scripts/bootstrap.min.js"></script>
+    <script>
+      $("#resume").click(() =>{
+        alert('hello');
+      });
+    </script>
   </body>
 
 </html>

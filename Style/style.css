@@ -11,6 +11,7 @@ h1 {
     background-image:url('/HomePage/Images/WelcomeBG.jpg');
     background-repeat:no-repeat;
     background-position:center center;
+        background-attachment: fixed;
 }
 
 #Portfolio {
@@ -18,6 +19,7 @@ h1 {
     background-repeat:no-repeat;
     background-position:center center;
     margin:0px 0px 0px 0px;
+    background-attachment: fixed;
 }
 
 #AboutMe {
